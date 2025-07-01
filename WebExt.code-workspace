@@ -1,0 +1,18 @@
+{
+  "folders": [
+    {
+      "path": ".",
+    },
+  ],
+  "settings": {
+    "terminal.integrated.automationProfile.linux": {
+      "path": "/usr/bin/env",
+      "args": ["direnv", "exec", ".", "sh"],
+    },
+    "terminal.integrated.automationProfile.osx": {
+      "path": "/usr/bin/env",
+      "args": ["direnv", "exec", ".", "sh"],
+    },
+    "npm.exclude": "**/.direnv/**",
+  },
+}

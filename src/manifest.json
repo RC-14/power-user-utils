@@ -1,0 +1,62 @@
+{
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa}"
+    }
+  },
+  "manifest_version": 2,
+  "name": "Power User Utils",
+  "short_name": "PowUTils",
+  "version": "0",
+  "icons": {
+    "120": "./path/to/icon.png"
+  },
+  "background": {
+    "scripts": ["./background/loader.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["./lib/devToolHelpers.js"],
+      "all_frames": true,
+      "run_at": "document_start"
+    }
+  ],
+  "permissions": [
+    "<all_urls>",
+    "activeTab",
+    "bookmarks",
+    "browserSettings",
+    "browsingData",
+    "clipboardRead",
+    "clipboardWrite",
+    "contextualIdentities",
+    "cookies",
+    "devtools",
+    "downloads",
+    "downloads.open",
+    "find",
+    "geolocation",
+    "history",
+    "idle",
+    "management",
+    "nativeMessaging",
+    "notifications",
+    "pkcs11",
+    "privacy",
+    "proxy",
+    "scripting",
+    "search",
+    "sessions",
+    "storage",
+    "tabHide",
+    "tabs",
+    "topSites",
+    "unlimitedStorage",
+    "webNavigation",
+    "webRequest",
+    "webRequestBlocking",
+    "webRequestFilterResponse",
+    "webRequestFilterResponse.serviceWorkerScript"
+  ]
+}

@@ -1,0 +1,19 @@
+# MacOS
+.DS_Store
+
+# direnv
+.direnv
+
+# Nix (dunno if it'd even try but better safe than sorry)
+flake.lock
+
+# Node/NPM
+node_modules/
+package-lock.json
+
+# Build output
+build/
+dist/
+
+# TypeScript
+*.tsbuildinfo

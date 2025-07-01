@@ -1,0 +1,15 @@
+# MacOS
+.DS_Store
+
+# direnv
+.direnv
+
+# Node/NPM
+node_modules/
+
+# Build output
+build/
+dist/
+
+# TypeScript
+*.tsbuildinfo
