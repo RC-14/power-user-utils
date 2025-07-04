@@ -1,4 +1,4 @@
-import { webRequest, type WebRequest } from 'webextension-polyfill';
+import { webRequest } from 'webextension-polyfill';
 import type { PagePatcher } from '/src/lib/pagePatches';
 
 const urlToPatchesMap: Map<
@@ -41,8 +41,8 @@ const pagePatcher: PagePatcher = {
     streamFilter.onstop = () => {
       let response = decoder.decode(rawResponse);
 
-      // Only here to stop TS from complaining
       for (const patch of patches) {
+        // Only here to stop TS from complaining
         if (typeof patch.replacer === 'string') {
           response = response.replaceAll(patch.searchValue, patch.replacer);
         } else {
