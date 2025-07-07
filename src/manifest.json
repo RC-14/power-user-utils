@@ -8,9 +8,7 @@
   "name": "Power User Utils",
   "short_name": "PowUTils",
   "version": "0",
-  "icons": {
-    "120": "./path/to/icon.png"
-  },
+  "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'",
   "background": {
     "scripts": ["./background/loader.js"]
   },
