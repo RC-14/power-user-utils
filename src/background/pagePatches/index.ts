@@ -1,7 +1,13 @@
 import { webRequest, type WebRequest } from 'webextension-polyfill';
 import eventTypeToPatcherMapMap from './patchers';
 import type { BackgroundFragment } from '/src/lib/backgroundFragment';
-import type { DomainToPatcherMap, EventNames, EventNameToDetailsType, EventNameToEventType } from '/src/lib/pagePatches';
+import type {
+  DomainToPatcherMap,
+  EventNames,
+  EventNameToDetailsType,
+  EventNameToEventType,
+  PatchHandler,
+} from '/src/lib/pagePatches';
 
 const getExtraInfoSpecForEvent = <T extends EventNames>(
   event: EventNameToEventType<T>
@@ -32,7 +38,7 @@ const getExtraInfoSpecForEvent = <T extends EventNames>(
       return ['responseHeaders'];
 
     case webRequest.onAuthRequired:
-      return ['blocking', 'asyncBlocking'];
+      return ['asyncBlocking'];
 
     case webRequest.onResponseStarted:
       return ['responseHeaders'];
@@ -48,43 +54,129 @@ const getExtraInfoSpecForEvent = <T extends EventNames>(
 const registerListener = <T extends EventNames>(event: EventNameToEventType<T>, domainToPatcherMap: DomainToPatcherMap<T>) =>
   event.addListener(
     // @ts-ignore TS sadly fucks up the types and their recognition so badly that this is necessary
-    (details: EventNameToDetailsType<T>) => {
+    async (details: EventNameToDetailsType<T>) => {
       const url = new URL(details.url);
 
       const hostDomain = url.hostname.split('.').slice(-2).join('.');
       const patcher = domainToPatcherMap.get(hostDomain);
       if (typeof patcher !== 'function') return undefined;
 
-      return patcher(details);
+      return await patcher(details);
     },
     { urls: ['<all_urls>'] },
     getExtraInfoSpecForEvent(event)
   );
 
-if (eventTypeToPatcherMapMap.beforeRequest) {
-  registerListener(webRequest.onBeforeRequest, eventTypeToPatcherMapMap.beforeRequest);
-}
-if (eventTypeToPatcherMapMap.beforeSendHeaders) {
-  registerListener(webRequest.onBeforeSendHeaders, eventTypeToPatcherMapMap.beforeSendHeaders);
-}
-if (eventTypeToPatcherMapMap.sendHeaders) {
-  registerListener(webRequest.onSendHeaders, eventTypeToPatcherMapMap.sendHeaders);
-}
-if (eventTypeToPatcherMapMap.headersReceived) {
-  registerListener(webRequest.onHeadersReceived, eventTypeToPatcherMapMap.headersReceived);
-}
-if (eventTypeToPatcherMapMap.beforeRedirect) {
-  registerListener(webRequest.onBeforeRedirect, eventTypeToPatcherMapMap.beforeRedirect);
-}
-if (eventTypeToPatcherMapMap.authRequired) {
-  registerListener(webRequest.onAuthRequired, eventTypeToPatcherMapMap.authRequired);
-}
-if (eventTypeToPatcherMapMap.responseStarted) {
-  registerListener(webRequest.onResponseStarted, eventTypeToPatcherMapMap.responseStarted);
-}
-if (eventTypeToPatcherMapMap.completed) {
-  registerListener(webRequest.onCompleted, eventTypeToPatcherMapMap.completed);
-}
+registerListener(webRequest.onBeforeRequest, eventTypeToPatcherMapMap.beforeRequest);
+registerListener(webRequest.onBeforeSendHeaders, eventTypeToPatcherMapMap.beforeSendHeaders);
+registerListener(webRequest.onSendHeaders, eventTypeToPatcherMapMap.sendHeaders);
+registerListener(webRequest.onHeadersReceived, eventTypeToPatcherMapMap.headersReceived);
+registerListener(webRequest.onBeforeRedirect, eventTypeToPatcherMapMap.beforeRedirect);
+registerListener(webRequest.onAuthRequired, eventTypeToPatcherMapMap.authRequired);
+registerListener(webRequest.onResponseStarted, eventTypeToPatcherMapMap.responseStarted);
+registerListener(webRequest.onCompleted, eventTypeToPatcherMapMap.completed);
+
+Object.defineProperty(globalThis, 'pagePatches', {
+  configurable: false,
+  enumerable: true,
+  writable: false,
+  value: {
+    addPatchForDomain: <T extends EventNames>(domain: string, type: T, patcher: PatchHandler<T>) => {
+      if (!(typeof domain === 'string' && typeof type === 'string' && typeof patcher === 'function'))
+        throw new Error('Malformed arguments: wrong type');
+      if (
+        ![
+          'beforeRequest',
+          'beforeSendHeaders',
+          'sendHeaders',
+          'headersReceived',
+          'beforeRedirect',
+          'authRequired',
+          'responseStarted',
+          'completed',
+        ].includes(type)
+      )
+        throw new Error("Malformed arguments: type isn't a valid event name");
+
+      // @ts-ignore part 2 of the above
+      eventTypeToPatcherMapMap[type].set(domain, patcher);
+    },
+    hasPatchForDomain: (domain: string, type?: EventNames) => {
+      if (!(typeof domain === 'string' && (type === undefined || typeof type === 'string')))
+        throw new Error('Malformed arguments: wrung type');
+      if (
+        typeof type === 'string' &&
+        ![
+          'beforeRequest',
+          'beforeSendHeaders',
+          'sendHeaders',
+          'headersReceived',
+          'beforeRedirect',
+          'authRequired',
+          'responseStarted',
+          'completed',
+        ].includes(type)
+      )
+        throw new Error("Malformed arguments: type isn't a valid event name or undefined");
+
+      if (type !== undefined) {
+        return eventTypeToPatcherMapMap[type].has(domain);
+      }
+
+      let result: boolean = false;
+      for (const type of [
+        'beforeRequest',
+        'beforeSendHeaders',
+        'sendHeaders',
+        'headersReceived',
+        'beforeRedirect',
+        'authRequired',
+        'responseStarted',
+        'completed',
+      ] as const) {
+        result = result || eventTypeToPatcherMapMap[type].has(domain);
+      }
+      return result;
+    },
+    removePatchForDomain: (domain: string, type?: EventNames) => {
+      if (!(typeof domain === 'string' && (type === undefined || typeof type === 'string')))
+        throw new Error('Malformed arguments: wrung type');
+      if (
+        typeof type === 'string' &&
+        ![
+          'beforeRequest',
+          'beforeSendHeaders',
+          'sendHeaders',
+          'headersReceived',
+          'beforeRedirect',
+          'authRequired',
+          'responseStarted',
+          'completed',
+        ].includes(type)
+      )
+        throw new Error("Malformed arguments: type isn't a valid event name or undefined");
+
+      if (type !== undefined) {
+        return eventTypeToPatcherMapMap[type].delete(domain);
+      }
+
+      let result: boolean = false;
+      for (const type of [
+        'beforeRequest',
+        'beforeSendHeaders',
+        'sendHeaders',
+        'headersReceived',
+        'beforeRedirect',
+        'authRequired',
+        'responseStarted',
+        'completed',
+      ] as const) {
+        result = result || eventTypeToPatcherMapMap[type].delete(domain);
+      }
+      return result;
+    },
+  },
+});
 
 const fragment: BackgroundFragment = {};
 export default fragment;

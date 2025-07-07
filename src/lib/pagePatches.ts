@@ -50,12 +50,12 @@ export type PagePatcher = {
 export type DomainToPatcherMap<T extends EventNames> = Map<string, PatchHandler<T>>;
 
 export type EventTypeToPatcherMapMap = {
-  beforeRequest?: DomainToPatcherMap<'beforeRequest'>;
-  beforeSendHeaders?: DomainToPatcherMap<'beforeSendHeaders'>;
-  sendHeaders?: DomainToPatcherMap<'sendHeaders'>;
-  headersReceived?: DomainToPatcherMap<'headersReceived'>;
-  beforeRedirect?: DomainToPatcherMap<'beforeRedirect'>;
-  authRequired?: DomainToPatcherMap<'authRequired'>;
-  responseStarted?: DomainToPatcherMap<'responseStarted'>;
-  completed?: DomainToPatcherMap<'completed'>;
+  beforeRequest: DomainToPatcherMap<'beforeRequest'>;
+  beforeSendHeaders: DomainToPatcherMap<'beforeSendHeaders'>;
+  sendHeaders: DomainToPatcherMap<'sendHeaders'>;
+  headersReceived: DomainToPatcherMap<'headersReceived'>;
+  beforeRedirect: DomainToPatcherMap<'beforeRedirect'>;
+  authRequired: DomainToPatcherMap<'authRequired'>;
+  responseStarted: DomainToPatcherMap<'responseStarted'>;
+  completed: DomainToPatcherMap<'completed'>;
 };
