@@ -54,14 +54,18 @@ const getExtraInfoSpecForEvent = <T extends EventNames>(
 const registerListener = <T extends EventNames>(event: EventNameToEventType<T>, domainToPatcherMap: DomainToPatcherMap<T>) =>
   event.addListener(
     // @ts-ignore TS sadly fucks up the types and their recognition so badly that this is necessary
-    async (details: EventNameToDetailsType<T>) => {
+    async (details: EventNameToDetailsType<T>, asyncCallback: (res: WebRequest.BlockingResponse) => void | undefined) => {
       const url = new URL(details.url);
 
       const hostDomain = url.hostname.split('.').slice(-2).join('.');
       const patcher = domainToPatcherMap.get(hostDomain);
-      if (typeof patcher !== 'function') return undefined;
+      const result = patcher ? await patcher(details) : undefined;
 
-      return await patcher(details);
+      if (asyncCallback) {
+        asyncCallback(result ?? {});
+        return;
+      }
+      return result;
     },
     { urls: ['<all_urls>'] },
     getExtraInfoSpecForEvent(event)
