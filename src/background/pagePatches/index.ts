@@ -107,7 +107,7 @@ Object.defineProperty(globalThis, 'pagePatches', {
     },
     hasPatchForDomain: (domain: string, type?: EventNames) => {
       if (!(typeof domain === 'string' && (type === undefined || typeof type === 'string')))
-        throw new Error('Malformed arguments: wrung type');
+        throw new Error('Malformed arguments: wrong type');
       if (
         typeof type === 'string' &&
         ![
@@ -144,7 +144,7 @@ Object.defineProperty(globalThis, 'pagePatches', {
     },
     removePatchForDomain: (domain: string, type?: EventNames) => {
       if (!(typeof domain === 'string' && (type === undefined || typeof type === 'string')))
-        throw new Error('Malformed arguments: wrung type');
+        throw new Error('Malformed arguments: wrong type');
       if (
         typeof type === 'string' &&
         ![
