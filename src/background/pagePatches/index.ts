@@ -102,7 +102,7 @@ Object.defineProperty(globalThis, 'pagePatches', {
       )
         throw new Error("Malformed arguments: type isn't a valid event name");
 
-      // @ts-ignore part 2 of the above
+      // @ts-ignore part 2 of the above mentioned type problems
       eventTypeToPatcherMapMap[type].set(domain, patcher);
     },
     hasPatchForDomain: (domain: string, type?: EventNames) => {
