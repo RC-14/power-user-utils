@@ -142,6 +142,16 @@ Object.defineProperty(globalThis, 'pagePatches', {
       }
       return result;
     },
+    getAllPatches: () => ({
+      beforeRequest: [...eventTypeToPatcherMapMap['beforeRequest'].entries()],
+      beforeSendHeaders: [...eventTypeToPatcherMapMap['beforeSendHeaders'].entries()],
+      sendHeaders: [...eventTypeToPatcherMapMap['sendHeaders'].entries()],
+      headersReceived: [...eventTypeToPatcherMapMap['headersReceived'].entries()],
+      beforeRedirect: [...eventTypeToPatcherMapMap['beforeRedirect'].entries()],
+      authRequired: [...eventTypeToPatcherMapMap['authRequired'].entries()],
+      responseStarted: [...eventTypeToPatcherMapMap['responseStarted'].entries()],
+      completed: [...eventTypeToPatcherMapMap['completed'].entries()],
+    }),
     removePatchForDomain: (domain: string, type?: EventNames) => {
       if (!(typeof domain === 'string' && (type == undefined || typeof type === 'string')))
         throw new Error('Malformed arguments: wrong type');
