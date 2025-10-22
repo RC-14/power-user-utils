@@ -106,7 +106,7 @@ Object.defineProperty(globalThis, 'pagePatches', {
       eventTypeToPatcherMapMap[type].set(domain, patcher);
     },
     hasPatchForDomain: (domain: string, type?: EventNames) => {
-      if (!(typeof domain === 'string' && (type === undefined || typeof type === 'string')))
+      if (!(typeof domain === 'string' && (type == undefined || typeof type === 'string')))
         throw new Error('Malformed arguments: wrong type');
       if (
         typeof type === 'string' &&
@@ -123,7 +123,7 @@ Object.defineProperty(globalThis, 'pagePatches', {
       )
         throw new Error("Malformed arguments: type isn't a valid event name or undefined");
 
-      if (type !== undefined) {
+      if (type != undefined) {
         return eventTypeToPatcherMapMap[type].has(domain);
       }
 
@@ -143,7 +143,7 @@ Object.defineProperty(globalThis, 'pagePatches', {
       return result;
     },
     removePatchForDomain: (domain: string, type?: EventNames) => {
-      if (!(typeof domain === 'string' && (type === undefined || typeof type === 'string')))
+      if (!(typeof domain === 'string' && (type == undefined || typeof type === 'string')))
         throw new Error('Malformed arguments: wrong type');
       if (
         typeof type === 'string' &&
@@ -160,7 +160,7 @@ Object.defineProperty(globalThis, 'pagePatches', {
       )
         throw new Error("Malformed arguments: type isn't a valid event name or undefined");
 
-      if (type !== undefined) {
+      if (type != undefined) {
         return eventTypeToPatcherMapMap[type].delete(domain);
       }
 
