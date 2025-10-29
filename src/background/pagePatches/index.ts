@@ -143,14 +143,14 @@ Object.defineProperty(globalThis, 'pagePatches', {
       return result;
     },
     getAllPatches: () => ({
-      beforeRequest: [...eventTypeToPatcherMapMap['beforeRequest'].entries()],
-      beforeSendHeaders: [...eventTypeToPatcherMapMap['beforeSendHeaders'].entries()],
-      sendHeaders: [...eventTypeToPatcherMapMap['sendHeaders'].entries()],
-      headersReceived: [...eventTypeToPatcherMapMap['headersReceived'].entries()],
-      beforeRedirect: [...eventTypeToPatcherMapMap['beforeRedirect'].entries()],
-      authRequired: [...eventTypeToPatcherMapMap['authRequired'].entries()],
-      responseStarted: [...eventTypeToPatcherMapMap['responseStarted'].entries()],
-      completed: [...eventTypeToPatcherMapMap['completed'].entries()],
+      beforeRequest: Object.fromEntries(eventTypeToPatcherMapMap['beforeRequest'].entries()),
+      beforeSendHeaders: Object.fromEntries(eventTypeToPatcherMapMap['beforeSendHeaders'].entries()),
+      sendHeaders: Object.fromEntries(eventTypeToPatcherMapMap['sendHeaders'].entries()),
+      headersReceived: Object.fromEntries(eventTypeToPatcherMapMap['headersReceived'].entries()),
+      beforeRedirect: Object.fromEntries(eventTypeToPatcherMapMap['beforeRedirect'].entries()),
+      authRequired: Object.fromEntries(eventTypeToPatcherMapMap['authRequired'].entries()),
+      responseStarted: Object.fromEntries(eventTypeToPatcherMapMap['responseStarted'].entries()),
+      completed: Object.fromEntries(eventTypeToPatcherMapMap['completed'].entries()),
     }),
     removePatchForDomain: (domain: string, type?: EventNames) => {
       if (!(typeof domain === 'string' && (type == undefined || typeof type === 'string')))
