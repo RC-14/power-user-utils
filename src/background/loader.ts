@@ -8,11 +8,13 @@ import { RuntimeMessageSchema } from '/src/lib/runtimeMessages';
 import bgRun from './bgRun';
 import fullscreenOnStartup from './fullscreenOnStartup';
 import pagePatches from './pagePatches';
+import whoami from './whoami';
 
 const fragments: Map<string, BackgroundFragment> = new Map();
 fragments.set('bgRun', bgRun);
 fragments.set('fullscreenOnStartup', fullscreenOnStartup);
 fragments.set('pagePatches', pagePatches);
+fragments.set('whoami', whoami);
 
 /*
  * Register Handlers

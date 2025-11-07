@@ -1,4 +1,5 @@
-import type { JSONValue } from './json';
+import type { Downloads } from 'webextension-polyfill';
+import type { JSONObject, JSONValue } from './json';
 import { qs, qsa, sendRuntimeMessage } from '/src/lib/utils';
 
 declare global {
@@ -44,10 +45,146 @@ const bgRun = async (func: string, params: JSONValue[]) => {
   return await sendRuntimeMessage('background', 'bgRun', 'run', { func, params });
 };
 
+const whoami = async () => await sendRuntimeMessage('background', 'whoami', 'whoami');
+
+const download = async (downloadOptions: Downloads.DownloadOptionsType) => {
+  // stop ts from complaining - I don't know what else to do here
+  const options = downloadOptions as Downloads.DownloadOptionsType & JSONObject;
+
+  if (options.saveAs == null) options.saveAs = false;
+
+  const info = await whoami();
+  if (
+    info != null &&
+    typeof info === 'object' &&
+    !Array.isArray(info) &&
+    info.tab != null &&
+    typeof info.tab === 'object' &&
+    !Array.isArray(info.tab)
+  ) {
+    if (options.cookieStoreId == null && typeof info.tab.cookieStoreId === 'string')
+      options.cookieStoreId = info.tab.cookieStoreId;
+    if (options.incognito == null && typeof info.tab.incognito === 'boolean') options.incognito = info.tab.incognito;
+  }
+
+  if (options.url.startsWith('blob:')) {
+    options.url = await new Promise(async (resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result !== 'string') throw new Error("Result of blob: to data: URL conersion isn't a String.");
+        resolve(reader.result);
+      };
+      reader.readAsDataURL(await fetch(options.url).then((r) => r.blob()));
+    });
+  }
+
+  if (!options.url.startsWith('data:')) return await bgRun('browser.downloads.download', [options]);
+
+  return await bgRun('eval', [
+    `(async options => {
+    const byteString = atob(options.url.split(',')[1]);
+    const type = options.url.split(',')[0].split(':')[1].split(';')[0];
+    const arrBuf = new ArrayBuffer(byteString.length);
+    const intArr = new Uint8Array(arrBuf);
+    for (let i = 0; i < byteString.length; i++) intArr[i] = byteString.charCodeAt(i);
+
+    options.url = URL.createObjectURL(new Blob([arrBuf], { type }));
+    return await browser.downloads.download(options);
+  })(${JSON.stringify(options)})`,
+  ]);
+};
+
 let noAuth = false;
 
+const makeAuthenticatedFunc =
+  (name: string, func: Function) =>
+  (...args: unknown[]) => {
+    const strArgs = args.map((v) => JSON.stringify(v));
+
+    if (
+      !noAuth &&
+      !confirm(
+        'Do you want to allow this call to ' +
+          name +
+          '?\n\n' +
+          "Don't accept if it wasn't made by you!\nIncorrect or malicious use can be extremely dangerous!\n\n" +
+          'Arguments to be passed to ' +
+          name +
+          ':\n\n' +
+          strArgs.join('\n\n')
+      )
+    ) {
+      throw new Error('Call to ' + name + ' was not authenticated.');
+    }
+
+    if (noAuth) {
+      console.warn(
+        'Authentication was not required for a call to ' + name + ' whith the following arguments:',
+        ...args,
+        'Stringified: ' + strArgs.join(' ')
+      );
+    }
+
+    // @ts-ignore
+    const unsafeWindow = window.wrappedJSObject ?? window;
+
+    const result = func(...args);
+    if (!(result instanceof Promise || result instanceof window.Promise)) return cloneInto(result, unsafeWindow);
+
+    return new window.Promise((resolve) =>
+      result
+        .then((v) => {
+          resolve(cloneInto(v, unsafeWindow));
+        })
+        .catch((e) => {
+          resolve(cloneInto(e, unsafeWindow));
+        })
+    );
+  };
+
+const makePrivilegedWrapperGetter = (name: string, func: Function) => () => {
+  if (
+    confirm(
+      'Do you really want to allow the creation of a privileged ' +
+        name +
+        ' wrapper?\n\n' +
+        'Always assume that this may be used to take over your entire browser!'
+    )
+  ) {
+    // @ts-ignore
+    const unsafeWindow = window.wrappedJSObject ?? window;
+
+    return exportFunction(
+      (...args: unknown[]) => {
+        console.warn(
+          'A priviliged ' + name + ' wrapper was called with the following arguments:',
+          ...args,
+          'Stringified: ' + args.map((v) => JSON.stringify(v)).join(' ')
+        );
+
+        const result = func(...args);
+        if (!(result instanceof Promise || result instanceof window.Promise)) return cloneInto(result, unsafeWindow);
+
+        return new window.Promise((resolve) =>
+          result
+            .then((v) => {
+              resolve(cloneInto(v, unsafeWindow));
+            })
+            .catch((e) => {
+              resolve(cloneInto(e, unsafeWindow));
+            })
+        );
+      },
+      unsafeWindow,
+      { allowCrossOriginArguments: true }
+    );
+  }
+
+  throw new Error('Creation of a priviliged wrapper for ' + name + ' was not authenticated.');
+};
+
 const pageContextUtils = {
-  disableAuth: () => {
+  _disableAuth: () => {
     if (
       confirm(
         'Do you really want to disable authentication prompts?\n\n' +
@@ -59,87 +196,15 @@ const pageContextUtils = {
     }
     throw new Error('Disabling authentication was not authenticated.');
   },
-  enableAuth: () => {
+  _enableAuth: () => {
     noAuth = false;
   },
-  getPriviligedBgRun: () => {
-    if (
-      confirm(
-        'Do you really want to allow the creation of a privileged bgRun wrapper?\n\n' +
-          'This will give the context with access to the wrapper (and potentially the whole website) access to all browser extension exclusive APIs, which is extremely dangerous if they are used incorrectly or malicously.'
-      )
-    ) {
-      // @ts-ignore
-      const unsafeWindow = window.wrappedJSObject ?? window;
-
-      return exportFunction(
-        (func: string, params: JSONValue[]) => {
-          console.warn(
-            'A priviliged bgRun wrapper was called with the following arguments:',
-            func,
-            params,
-            'Stringified: ' + JSON.stringify(func) + ' ' + JSON.stringify(params)
-          );
-
-          const promise = bgRun(func, params);
-          return new window.Promise((resolve) =>
-            promise
-              .then((v) => {
-                resolve(cloneInto(v, unsafeWindow));
-              })
-              .catch((e) => {
-                resolve(cloneInto(e, unsafeWindow));
-              })
-          );
-        },
-        unsafeWindow,
-        { allowCrossOriginArguments: true }
-      );
-    }
-
-    throw new Error('Creation of a priviliged wrapper for bgRun was not authenticated.');
-  },
-  bgRun: (func: string, params: JSONValue[]): Promise<unknown> => {
-    const strFunc = JSON.stringify(func);
-    const strParams = JSON.stringify(params);
-
-    if (
-      !noAuth &&
-      !confirm(
-        'Do you want to allow this call to bgRun?\n\n' +
-          "Don't accept if it wasn't made by you!\nIncorrect or malicious use of bgRun can be extremely dangerous!\n\n" +
-          'Arguments to be passed to bgRun:\n\n' +
-          strFunc +
-          '\n\n' +
-          strParams
-      )
-    ) {
-      throw new Error('Call to bgRun was not authenticated.');
-    }
-
-    if (noAuth) {
-      console.warn(
-        'Authentication was not required for a call to bgRun whith the following arguments:',
-        func,
-        params,
-        'Stringified: ' + strFunc + ' ' + strParams
-      );
-    }
-
-    // @ts-ignore
-    const unsafeWindow = window.wrappedJSObject ?? window;
-
-    const promise = bgRun(func, params);
-    return new window.Promise((resolve) =>
-      promise
-        .then((v) => {
-          resolve(cloneInto(v, unsafeWindow));
-        })
-        .catch((e) => {
-          resolve(cloneInto(e, unsafeWindow));
-        })
-    );
-  },
+  bgRun: makeAuthenticatedFunc('bgRun', bgRun),
+  whoami: makeAuthenticatedFunc('whoami', whoami),
+  download: makeAuthenticatedFunc('download', download),
+  getPriviligedBgRun: makePrivilegedWrapperGetter('bgRun', bgRun),
+  getPriviligedWhoami: makePrivilegedWrapperGetter('whoami', whoami),
+  getPriviligedDownload: makePrivilegedWrapperGetter('download', download),
 };
 
 addToGlobalThis('writeToPageContext', writeToPageContext);
