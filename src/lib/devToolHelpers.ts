@@ -46,7 +46,7 @@ const bgRun = async (func: string, params: JSONValue[]) => {
 
 let noAuth = false;
 
-const dbgperm = {
+const pageContextUtils = {
   disableAuth: () => {
     if (
       confirm(
@@ -144,8 +144,8 @@ const dbgperm = {
 
 addToGlobalThis('writeToPageContext', writeToPageContext);
 addToGlobalThis('bgRun', bgRun);
-addToGlobalThis('dbgperm', dbgperm);
+addToGlobalThis('___puu', pageContextUtils);
 addToGlobalThis('qs', qs);
 addToGlobalThis('qsa', qsa);
 
-writeToPageContext('dbgperm', dbgperm);
+writeToPageContext('___puu', pageContextUtils);
