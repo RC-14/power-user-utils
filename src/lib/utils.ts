@@ -51,6 +51,7 @@ export const isElementEditable = (element: HTMLElement) => {
   if (element instanceof HTMLInputElement) return true;
   if (element instanceof HTMLTextAreaElement) return true;
   if (element.isContentEditable) return true;
+  if (element.ownerDocument.designMode === 'on') return true;
   return false;
 };
 
