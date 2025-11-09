@@ -1,6 +1,6 @@
 import type { Downloads } from 'webextension-polyfill';
 import type { JSONObject, JSONValue } from './json';
-import { qs, qsa, sendRuntimeMessage } from '/src/lib/utils';
+import { getNodePath, isElementEditable, qs, qsa, sendRuntimeMessage, stringifyNode } from '/src/lib/utils';
 
 declare global {
   function cloneInto<T extends unknown>(
@@ -183,6 +183,25 @@ const makePrivilegedWrapperGetter = (name: string, func: Function) => () => {
   throw new Error('Creation of a priviliged wrapper for ' + name + ' was not authenticated.');
 };
 
+const privilegedPageContextUtils = Object.entries({
+  bgRun: bgRun,
+  whoami: whoami,
+  download: download,
+}).reduce(
+  (finalObject, entry) => {
+    finalObject[entry[0]] = makeAuthenticatedFunc(entry[0], entry[1]);
+    finalObject[
+      'getPriviliged' +
+        entry[0]
+          .split('')
+          .map((c, i) => (i === 0 ? c.toUpperCase() : c))
+          .join('')
+    ] = makePrivilegedWrapperGetter(entry[0], entry[1]);
+    return finalObject;
+  },
+  {} as Record<string, Function>
+);
+
 const pageContextUtils = {
   _disableAuth: () => {
     if (
@@ -199,18 +218,19 @@ const pageContextUtils = {
   _enableAuth: () => {
     noAuth = false;
   },
-  bgRun: makeAuthenticatedFunc('bgRun', bgRun),
-  whoami: makeAuthenticatedFunc('whoami', whoami),
-  download: makeAuthenticatedFunc('download', download),
-  getPriviligedBgRun: makePrivilegedWrapperGetter('bgRun', bgRun),
-  getPriviligedWhoami: makePrivilegedWrapperGetter('whoami', whoami),
-  getPriviligedDownload: makePrivilegedWrapperGetter('download', download),
+  _priv: privilegedPageContextUtils,
+  isElementEditable,
+  stringifyNode,
+  getNodePath,
 };
 
 addToGlobalThis('writeToPageContext', writeToPageContext);
-addToGlobalThis('bgRun', bgRun);
 addToGlobalThis('___puu', pageContextUtils);
+addToGlobalThis('bgRun', bgRun);
+addToGlobalThis('getNodePath', getNodePath);
+addToGlobalThis('isElementEditable', isElementEditable);
 addToGlobalThis('qs', qs);
 addToGlobalThis('qsa', qsa);
+addToGlobalThis('stringifyNode', stringifyNode);
 
 writeToPageContext('___puu', pageContextUtils);
